@@ -20,17 +20,6 @@ chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--disable-gpu')
 driver = webdriver.Chrome(chrome_options=chrome_options)
 
-url = 'https://www.instagram.com/artist_eunji/'
-driver.get(url)
-user_page = BeautifulSoup(driver.page_source,'lxml')
-time.sleep(10)
-#first version:get newest post
-user_img = user_page.find('div',class_='_e3il2')
-get_update_post = user_img.parent
-pic_link = get_update_post.get('href')
-full_pic_url = 'https://www.instagram.com'+'%s'%pic_link
-
-time.sleep(5)
 
 def down_pic(full_pic_url):
     driver.get(full_pic_url)
@@ -68,9 +57,9 @@ def send_mail():
     # receivers = ['946897558@qq.com','li.han.lh2@roche.com','47331207@qq.com','93996948@qq.com'] 
     receivers = ['946897558@qq.com']
     msg = MIMEMultipart()
-    msg['From'] = Header('IG post','utf-8')
+    msg['From'] = Header('Eunji','utf-8')
     msg['To'] = Header('H','utf-8')
-    msg['Subject'] = Header('BOT send','utf-8')
+    msg['Subject'] = Header('Eunji send photo to u','utf-8')
 
     fl_list = os.listdir('/home/eunji/save')
     num_fl_list = len(fl_list)
@@ -107,8 +96,33 @@ def send_mail():
         print ("Error")
 
 
-if open('link.txt').read() != full_pic_url:
-    open('link.txt','r+').write(full_pic_url)
-    open('link.txt').close()
-    down_pic(full_pic_url)
-    send_mail()
+
+def main_task():
+    url = 'https://www.instagram.com/artist_eunji/'
+    driver.get(url)
+    user_page = BeautifulSoup(driver.page_source,'lxml')
+    time.sleep(10)
+#first version:get newest post
+    user_img = user_page.find('div',class_='_e3il2')
+    get_update_post = user_img.parent
+    pic_link = get_update_post.get('href')
+    full_pic_url = 'https://www.instagram.com'+'%s'%pic_link
+
+    time.sleep(5)
+
+    if open('link.txt').read() != full_pic_url:
+        open('link.txt','r+').write(full_pic_url)
+        open('link.txt').close()
+        down_pic(full_pic_url)
+        send_mail()
+        fl_list = os.listdir('/home/eunji/save')
+        for del_file in fl_list:
+            os.remove('/home/eunji/save/%s'%del_file)
+    driver.close()
+
+schedule.every().day.at('09:30').do(main_task())
+while True:
+    schedule.run_pending()
+    time.sleep(5)
+
+
