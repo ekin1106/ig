@@ -21,13 +21,14 @@ chrome_options.add_argument('--disable-gpu')
 driver = webdriver.Chrome(chrome_options=chrome_options)
 
 
-def down_pic(full_pic_url):
+def down_pic(full_pic_url,url):
     driver.get(full_pic_url)
     time.sleep(5)
     html = etree.HTML(driver.page_source)
 #xpath Find script to list
     all_a_tags = html.xpath('//script[@type="text/javascript"]/text()')
     download_list = []
+    rename = re.findll(r'https://www.instagram.com/(.*)',url)
     for a_tag in all_a_tags:
         if a_tag.strip().startswith('window'):#strip remove space startswith find 'window'start Str
             data = a_tag.split('= {')[1][:-1]
@@ -39,29 +40,30 @@ def down_pic(full_pic_url):
                     n = 0
                     for get_link in js_data['entry_data']['PostPage'][0]['graphql']['shortcode_media']['edge_sidecar_to_children']['edges']:
                         all_pic.append(get_link['node']['display_url'])
-                    
+
                     for down in all_pic:
-                        urllib.request.urlretrieve(down,'/home/eunji/save/eunji_%d.jpg'%n)
+                        urllib.request.urlretrieve(down,'/home/eunji/save/%s_%d.jpg'%(rename,n))
                         n += 1
             except:
-                urllib.request.urlretrieve(edges['display_url'],'/home/eunji/save/eunji.jpg')
+                urllib.request.urlretrieve(edges['display_url'],'/home/eunji/save/%s.jpg'%rename)
 
 
 
 
-def send_mail():
-    mail_host='smtp.qq.com' 
-    mail_user='13989538@qq.com'   
+def send_mail(url):
+    ren = re.findll(r'https://www.instagram.com/(.*)',url)
+    mail_host='smtp.qq.com'
+    mail_user='13989538@qq.com'
     mail_pass='xmtwcdyfpfoocbcf'
     sender = '13989538@qq.com'
-    # receivers = ['946897558@qq.com','li.han.lh2@roche.com','47331207@qq.com','93996948@qq.com'] 
+    # receivers = ['946897558@qq.com','li.han.lh2@roche.com','47331207@qq.com','93996948@qq.com']
     receivers = ['946897558@qq.com']
     msg = MIMEMultipart()
-    msg['From'] = Header('Eunji','utf-8')
+    msg['From'] = Header('%s'%ren,'utf-8')
     msg['To'] = Header('H','utf-8')
-    msg['Subject'] = Header('Eunji send photo to u','utf-8')
+    msg['Subject'] = Header('%s send photo to u'%ren,'utf-8')
 
-    fl_list = os.listdir('/home/eunji/save')
+    fl_list = os.listdir('/home/%s/save'%ren)
     num_fl_list = len(fl_list)
 
 #only 1 pic
@@ -71,7 +73,7 @@ def send_mail():
             <p><img src="cid:%s"></p>
             '''%nfl
             msg.attach(MIMEText(mail_pic,'html','utf-8'))
-            f = open('/home/eunji/save/%s'%fl,'rb')
+            f = open('/home/%s/save/%s'%(ren,fl),'rb')
             msgImage = MIMEImage(f.read())
             f.close()
             msgImage.add_header('Content-ID','<%s>'%nfl)
@@ -81,7 +83,7 @@ def send_mail():
         <p><img src="cid:99"></p>
         '''
         msg.attach(MIMEText(mail_pic,'html','utf-8'))
-        f = open('/home/eunji/save/'%fl_list[0],'rb')
+        f = open('/home/%s/save/'%(ren,fl_list[0],'rb')
         msgImage = MIMEImage(f.read())
         f.close()
         msgImage.add_header('Content-ID','<99>')
@@ -96,9 +98,12 @@ def send_mail():
         print ("Error")
 
 
-
-def main_task():
-    url = 'https://www.instagram.com/artist_eunji/'
+def down_and_send_task(url):
+    # url = 'https://www.instagram.com/artist_eunji/'
+    #url = ['url1','url2']
+    #for i in url
+    #driver.get(i)
+    #正则匹配url中的名字，文件名也用这个名字
     driver.get(url)
     user_page = BeautifulSoup(driver.page_source,'lxml')
     time.sleep(10)
@@ -120,9 +125,19 @@ def main_task():
             os.remove('/home/eunji/save/%s'%del_file)
     driver.close()
 
-schedule.every().day.at('09:30').do(main_task())
+def main_task():
+    all_name_file = open('name.txt')
+    name_line = all_name_file.readline()
+    name_list = []
+    while name_line:
+        name_list.append(name_line,strip('\n'))
+        name_line = all_name_file.readline()
+    all_name_file.close()
+    for url in all_name_file:
+        down_and_send_task(url)
+
+
+schedule.every().day.at('09:30').do(down_and_send_task())
 while True:
     schedule.run_pending()
     time.sleep(5)
-
-
